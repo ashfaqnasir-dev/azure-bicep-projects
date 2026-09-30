@@ -1,0 +1,300 @@
+# 🚀 How-To Guide: Convert Azure Resources into Bicep Files
+
+A step-by-step guide to export existing Azure resources as ARM templates and convert them into clean, readable Bicep files.
+
+---
+
+## 📋 Table of Contents
+
+1. [Export the ARM Template from Azure](#-step-1-export-the-arm-template-from-azure)
+2. [Decompile to Bicep](#-step-2-decompile-to-bicep)
+   - [Method A: Using VS Code (GUI)](#method-a-using-vs-code-gui)
+   - [Method B: Using Azure CLI](#method-b-using-azure-cli--command-prompt)
+3. [Review and Customize](#-step-3-review-and-customize)
+
+---
+
+## 🎯 Overview
+
+Azure Portal lets you **export existing resources** as ARM templates. But ARM JSON is verbose and hard to read. **Bicep** is a cleaner, modern alternative. This guide shows you how to:
+
+1. Export any Azure resource as an ARM template
+2. Convert (decompile) it into Bicep
+3. Review and customize the Bicep file before deployment
+
+---
+
+## 📥 Step 1: Export the ARM Template from Azure
+
+### 1.1 Log in to Azure Portal
+
+Go to [https://portal.azure.com](https://portal.azure.com) and sign in.
+
+### 1.2 Select the Resource
+
+Navigate to the resource you want to convert — for example, an **Azure Storage Account**.
+
+### 1.3 Go to Export Template
+
+In the **left-hand menu**, scroll down to the **Automation** section and click **Export template**.
+
+### 1.4 Download the Template
+
+Click the **Download** button. This saves a `.zip` file containing:
+
+- `template.json` — The ARM template
+- `parameters.json` — The parameters file
+
+### 1.5 Extract the Archive
+
+Extract the downloaded `.zip` file to a local folder on your computer.
+
+**Folder structure after extraction:**
+
+```
+exported-template/
+├── template.json
+└── parameters.json
+```
+
+---
+
+## 🔄 Step 2: Decompile to Bicep
+
+You can decompile using **either** of the two methods below.
+
+---
+
+### Method A: Using VS Code (GUI)
+
+#### A.1 Install the Bicep Extension
+
+1. Open **Visual Studio Code**
+2. Press **`Ctrl + Shift + X`** to open the Extensions panel
+3. Search for **`Bicep`**
+4. Install the official **Bicep** extension by Microsoft
+
+#### A.2 Open the ARM Template
+
+Open the extracted `template.json` file in VS Code.
+
+#### A.3 Decompile into Bicep
+
+**Right-click** anywhere inside the file editor and choose:
+
+```
+Decompile into Bicep
+```
+
+#### A.4 Result
+
+VS Code will automatically generate the corresponding **`template.bicep`** file in the same folder.
+
+---
+
+### Method B: Using Azure CLI / Command Prompt
+
+#### B.1 Verify Azure CLI Installation
+
+Open a terminal and run:
+
+```bash
+az --version
+```
+
+If Azure CLI is not installed, download it from:  
+[https://learn.microsoft.com/cli/azure/install-azure-cli](https://learn.microsoft.com/cli/azure/install-azure-cli)
+
+#### B.2 Install the Bicep CLI Component
+
+```bash
+az bicep install
+```
+
+Verify installation:
+
+```bash
+az bicep version
+```
+
+#### B.3 Navigate to the Extracted Folder
+
+```bash
+cd path/to/extracted-folder
+```
+
+#### B.4 Decompile the ARM Template
+
+```bash
+az bicep decompile --file template.json
+```
+
+#### B.5 Result
+
+A new file named **`template.bicep`** will be generated in the same directory.
+
+**Folder structure after decompile:**
+
+```
+exported-template/
+├── template.json
+├── parameters.json
+└── template.bicep       ← Generated
+```
+
+---
+
+## ✏️ Step 3: Review and Customize
+
+### 3.1 Open the Bicep File
+
+Open the generated `.bicep` file and verify the resources. You should see:
+
+- Parent storage accounts
+- Blob containers
+- File shares
+- Any other exported resources
+
+### 3.2 Adjust Parameters and Naming
+
+Decompiled Bicep often contains **hardcoded values** (from the original deployment). Clean it up:
+
+- Replace hardcoded names with **parameters**
+- Update naming conventions to match your standards
+- Remove unused variables
+
+**Before (auto-generated):**
+
+```bicep
+resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: 'mystoreashfaq01'
+  location: 'eastus'
+  sku: { name: 'Standard_LRS' }
+  kind: 'StorageV2'
+}
+```
+
+**After (cleaned up):**
+
+```bicep
+@description('Storage account name')
+param storageName string
+
+@description('Azure region')
+param location string = resourceGroup().location
+
+resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: storageName
+  location: location
+  sku: { name: 'Standard_LRS' }
+  kind: 'StorageV2'
+}
+```
+
+### 3.3 Add Optional Properties with IntelliSense
+
+Use VS Code's **IntelliSense** (`Ctrl + Space`) inside Bicep blocks to add optional properties such as:
+
+- **Managed identities**
+- **Network rules**
+- **Tags**
+- **Diagnostic settings**
+- **Encryption settings**
+
+**Example — Adding tags:**
+
+```bicep
+resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: storageName
+  location: location
+  sku: { name: 'Standard_LRS' }
+  kind: 'StorageV2'
+  tags: {
+    Environment: 'Production'
+    ManagedBy: 'Bicep'
+  }
+}
+```
+
+### 3.4 Validate and Deploy
+
+**Validate the Bicep file:**
+
+```bash
+az bicep build --file template.bicep
+```
+
+**Deploy to Azure:**
+
+```bash
+az deployment group create \
+  --resource-group myResourceGroup \
+  --template-file template.bicep
+```
+
+---
+
+## 📊 Quick Reference
+
+| Task | Command / Action |
+|---|---|
+| **Export from Portal** | Resource → Automation → Export template → Download |
+| **Install Bicep extension** | VS Code → Extensions → Search "Bicep" |
+| **Decompile (VS Code)** | Right-click in `.json` → Decompile into Bicep |
+| **Decompile (CLI)** | `az bicep decompile --file template.json` |
+| **Install Bicep CLI** | `az bicep install` |
+| **Validate Bicep** | `az bicep build --file template.bicep` |
+| **Deploy Bicep** | `az deployment group create --template-file template.bicep` |
+| **IntelliSense** | `Ctrl + Space` inside `.bicep` file |
+
+---
+
+## 💡 Pro Tips
+
+- ✅ **Always review** the decompiled Bicep — it may not be perfectly clean
+- ✅ **Use parameters** instead of hardcoded values for reusability
+- ✅ **Add descriptions** with `@description()` decorators
+- ✅ **Format your code** with `az bicep format --file template.bicep`
+- ✅ **Lint your code** with `az bicep lint --file template.bicep`
+- ✅ **Version control** your Bicep files in GitHub
+
+---
+
+## ⚠️ Common Issues
+
+| Issue | Fix |
+|---|---|
+| `az bicep` not recognized | Run `az bicep install` |
+| Decompile errors | Some ARM features aren't supported — manually fix them |
+| Wrong resource names | Update parameters to use `uniqueString()` |
+| Deployment fails | Check `az bicep build` output for errors |
+
+---
+
+## 📚 Resources
+
+| Resource | Link |
+|---|---|
+| **Azure Portal** | https://portal.azure.com |
+| **Bicep Documentation** | https://learn.microsoft.com/azure/azure-resource-manager/bicep/ |
+| **Bicep GitHub** | https://github.com/Azure/bicep |
+| **Bicep Playground** | https://bicep.azurewebsites.net/ |
+
+---
+
+## 👤 Author
+
+**Ashfaq Nasir**
+
+- GitHub: [@ashfaq-dev](https://github.com/ashfaq-dev)
+- 24x Microsoft Certified | Azure Cloud Engineer
+
+---
+
+## 📄 License
+
+This guide is free to use and share.
+
+---
+
+⭐ If you found this guide helpful, please star the repository!
